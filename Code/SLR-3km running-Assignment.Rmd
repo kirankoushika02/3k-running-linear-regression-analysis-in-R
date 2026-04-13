@@ -1,0 +1,274 @@
+---
+title: "3k running assignment"
+author: "Kiran koushika Raja, id=24241163"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+ word_document: default
+ # html_document: default
+ # if you don't have Microsoft Word, you can output an html document and save it as a pdf for submission.
+ # just uncomment (remove the #) from the "# html_document: default" line and add a # in front of the "word_document: default" line
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Inference and linear regression for 3 km Running Times based on laboratory testing
+
+### Study Description:
+
+Sixteen well-trained male middle and long distance runners performed independently a 3 km time trial and a number of tests in the laboratory.  The time trial results were recorded as `Running.Time`.  One of the tests was running velocity at a blood lactate concentration of 4 mmol/L (`v4mM`), measured in km/hr.  For background knowledge to understand something about the study, it requires considerable physical effort to achieve this level of blood lactate concentration in well-trained athletes (if you want to know more about blood lactate and athletic performance here is a reference https://www.trainingpeaks.com/blog/what-is-lactate-and-lactate-threshold/).  
+
+Other tests were running velocity at Lactate Threshold (`vTlac`), and at VO2 max (`V02Max`) both measured in km/hr.  In addition, a measure of running economy, oxygen uptake (measured in ml/kg/min) at running speeds of 14.5km/hr and 16.1 km/hr were measured and the variable names are `Rel.14.5` and `Rel.16.1`.  
+
+All the laboratory testing took place on a motorised treadmill, and distance running performance was determined by 3 km time trials on an indoor 200m track.
+
+Based on data on other populations, the sports scientist doing the study wants to know what evidence the sample provides that the mean 3k running time in this population is different to 10 minutes 12 seconds (10.2 minutes), and also wants to estimate a confidence interval for the true mean 3k time.  Another question of interest is the 3k running time within which 90% of the population times will lie.  The sports scientist also wants to investigate if it is possible to predict 3k running time `Running.Time` from `v4mM`.
+
+### Aims: 
+
+To investigate whether 
+
+(1) is the mean 3k running time different to 10 minutes 12 seconds (ie as decimal 10.2 minutes) in the population of well-trained male middle and long distance runners?  What is a plausible range in which the true mean 3k time is likely to lie?  And what is a range of values within which we are 95% confident that 90% of population running times will lie?
+
+(2) can we use linear regression to predict 3 km running time in minutes (`Running.Time`) from running speed at lactate 4 mmol/L in km per hour (`v-4mM`)?
+
+It is decided in advance that the acceptable significance level for hypothesis testing is 0.05.
+
+```{r echo=TRUE, message=FALSE, warning=FALSE, paged.print=FALSE}
+# load required libraries
+library(tidyverse)
+library(infer)
+library(tolerance)
+```
+
+### Read the data and see a few rows
+
+```{r}
+# you need to have 3krunning.csv saved in the same folder as this .Rmd file, otherwise you will not be able to read in the data using this code chunk
+running = read.csv("3krunning.csv", header = TRUE)
+head(running)
+```
+
+### Summary Statistics
+
+Shown below are means and standard deviations for some of the variables in the dataset. 
+
+```{r}
+running %>% summarise(
+  count = n(),
+  meantime = mean(Running.Time),
+  sdtime = sd(Running.Time),
+  meanv4mM = mean(v4mM),
+  sdv4mM = sd(v4mM),
+  meanRel14.5 = mean(Rel.14.5),
+  sdRel14.5 = sd(Rel.14.5),
+  
+       )
+
+```
+
+
+## Aim 1. Hypothesis test and confidence interval for mean 3k time, and tolerance interval
+
+**50 marks**
+
+#### Task 1: Write the null and alternative hypotheses and significance level of the test 
+
+i.e. the hypothesis test for Aim (1), first sentence.
+
+The Null Hypothesis represented as H0 - 10.2 minutes is the mean of 3k running time of this population.μ equal to 10.2.
+
+Alternative Hypothesis represented as Ha - 10.2 minutes is not the mean of 3k running time of this population.μ not equal to 10.2.
+
+Significance Level represented as α and it is 0.05. It is the error threshold.
+
+
+
+#### Task 2: Appropriate statistical test and assumptions
+
+(a) What statistical test is appropriate to test the Task 1 hypotheses?  State the assumptions needed for the test to be valid, and how they could be justified in this study. (1-2 sentences).  
+
+One-Sample t-test is the test that is appropriate to test the task 1 hypotheses.It is appropriate because we are comparing the mean of population and the specific value.
+
+The assumptions for the test:
+->The data in the dataset are independent.
+->The data is randomly selected.
+
+(b) Comment on the output of the R code below in relation to an assumption for the test (1 sentence)
+
+The histogram shows the 3k running times for the people.The histogram is skewed to the right and it is not normally distributed. Also shows that there are more runners with shorter time and only few with longer times to finish. This visualization is helpful in test as it shows that the graph is right skewed.
+
+
+```{r}
+
+running %>% ggplot(aes(x =Running.Time )) + geom_histogram(bins = 4) + labs(title = "Histogram of 3k running times in sample") 
+
+```
+
+
+#### Task 3: Carry out the hypothesis test and estimate a 95% confidence interval for the true mean 3k time 
+
+The code below does a two-sided t test for the null hypothesis that the true mean `Rel.14.5` is equal to 50. Adapt the code below to carry out the hypothesis test from Task 1.
+
+
+```{r}
+running %>% dplyr::select(Running.Time) %>% t.test(mu = 10.2,conf.level=0.95)
+```
+
+#### Task 4: Interpret (1) The results of the hypothesis test (2) the 95% confidence interval 
+
+(1) Hypothesis test 
+p-value is 0.00119 and t-statistic is 3.9871. The p values is smaller than the significance level of 0.05.Because of this null hypothesis H0 is not taken , it is rejected. So the mean initially said 10.2 is not right and the actual mean is different for the population.
+(2) The 95% confidence Interval
+The confidence interval is from 9.0615 to 9.8547 minutes and this indicates that the true population mean of 3k running time in mostly between these values.
+
+Note: you need to interpret the results after you have adapted the code in Task 3.  You will not get marks for this question if you intepret the hypothesis test for the `Rel.14.5` variable.
+ 
+ (1-2 sentences)
+
+
+#### Task 5: Estimate and plot a 95% confidence interval for the mean using the bootstrap 
+
+The code below estimates a 90% confidence interval for the mean 3k time using the bootstrap method.
+Change the number of bootstrap replications to 1000, and change the confidence level to 95%. 
+
+
+```{r}
+set.seed(123456789) # this is for replicable simulations - do not change this
+boot <- running %>% 
+          specify(response = Running.Time) %>%
+          generate(reps = 1000, type = 'bootstrap') %>%
+          calculate(stat = 'mean')
+
+### Produce the 90% bootstrap confidence interval
+### using the generated bootstrap distribution of the sample statistic
+get_ci(boot, level = 0.95)
+
+### plot the histogram of bootstrap statistics
+### and shading the bootstrap confidence interval. 
+boot %>% 
+  visualize(method = "simulation") +
+  shade_confidence_interval(get_ci(boot))+
+  xlab("Bootstrap Mean")+
+  ylab("Frequency")
+
+
+```
+
+
+#### Task 6: Compare the 95% confidence interval using the t distribution with the bootstrap version 
+
+(1-2 sentences)
+The 95% confidence interval that we got during the t-distribution is 9.061532 and 9.854718 while the bootstrap values are 9.096812 and 9.802625. These values are close to each other which is a sign of consistency. The bootstrap can handle deviations from normality while the t-distribution fully relies on normality.
+
+#### Task 7: Estimate a tolerance interval with 95% confidence for the range of 3k times that 90% of the population will achieve.   
+
+(a) The code below estimates a tolerance interval for the range in which we are 95% confident 95% of the population oxygen uptake at running speed 14.5km/hr will lie.  Adapt the code to estimate  a tolerance interval for the range in which we are 95% confident 90% of the population of 3k times will lie.
+
+(b) Interpret the resulting interval (1 sentence) 
+This shows that the tolerance interval at 7.286239 and 11.63001 indicate that ninety percent of the population's running times will lie between range of the confidence intervals.
+ 
+
+```{r}
+normtol.int(running$Running.Time, alpha = 0.05, P = 0.95, side = 2)
+```
+```{r}
+normtol.int(running$Rel.14.5, alpha = 0.05, P = 0.90, side = 2)
+```
+
+## Aim (2) Linear Regression
+
+**40 marks**
+
+#### Task 8: Labelled scatterplot with smooth of `Running.Time` versus `v4mM`
+
+(a) The code below makes a scatterplot with smooth of `Running.Time` versus `Rel.14.5`.  Adapt the code to make a scatterplot with smooth of `Running.Time` versus `v4mM`.  Remember to update the title, axis labels, and units. 
+
+(b) What does the smoother suggest regarding the suitability of a simple linear regression model for the relationship between `Running.Time` and `v4mM`? (1 sentence)
+The smoother shows the relationship between the Running time and v4mM and suggests that a normal linear regression model will could be used for this data.
+
+```{r, warning = FALSE, message = FALSE}
+running %>% ggplot(aes(x = v4mM, y = Running.Time)) + geom_point() + geom_smooth() + labs(title = "Scatterplot with smooth for 3k time versus running v4mM", x = "V4mM", y = "3k time (minutes)")
+```
+
+
+
+#### Task 9: Correlation coefficient between `v4mM` and `Running.Time` 
+
+
+(a) The code below calculates the sample correlation coefficient between `Running.Time` and `Rel.14.5`.  Change to code to calculate the sample correlation coefficient between `Running.Time` and `v4mM`.
+
+```{r}
+running %>% dplyr::select (Running.Time, v4mM) %>% cor()
+```
+
+
+(b) Interpret the relationship between `Running.Time` and `v4mM`, referring to the relevant scatterplot and correlation coefficient. (1 sentence)
+This scatterplot shows a strong negative correlation between the Running time and the v4mM.As v4mM goes up, the Running time comes down.
+#### Task 10: Line of best fit for the linear relationship between 3 km running time and v4mM in the sample.  
+
+The code below calculates the simple linear regression for `Running.Time` versus `Rel.14.5`.  Change the code to produce the simple linear regression for `Running.Time` versus `v4mM`.
+
+```{r}
+lm1<-lm(Running.Time ~ v4mM, data = running)
+lm1
+```
+
+
+#### Task 11: Write down the equation of the line of best fit and also provide an interpretation of the slope and intercept. Does the intercept have a physically meaningful interpretation? 
+
+(2-3 sentences)
+Running.Time = 15.8223-0.3729 x v4mM
+Slope is -0.3739 so this says that the Running time decreases by 0.3729 minutes.
+Also, when Intercept which is at v4mM is equal to zero, means that the runner is not running. When it is zero the estimated running 3k time will be 15 minutes.
+
+
+#### Task 12: Predict the running time (i.e. `Running.Time`) when running speed at blood lactate concentration 4 mmol/litre (i.e. `v4mM`) is 18.9 km per hour.
+
+The code below predicts `Running.Time` when `Rel.14.5` = 48 ml/kg/min from the linear regression model of `Running.Time` on `Rel.14.5`.  It also shows the first few rows of the dataset.
+
+
+(a) Adapt the code to predict `Running.Time` when `v4mM`=18.9 km/hr from a linear regression of `Running.Time` on `v4mM`.
+```{r}
+lm1<-lm(Running.Time ~ v4mM, data = running)
+newdata <-data.frame(v4mM = 18.9)
+predict(lm1, newdata = newdata)
+head(running)
+```
+
+(b) Why is the predicted running time at `v4mM`=18.9 different to 8.82, the observed running time when `v4mM` is 18.9 km/hr? - see observation 4 in the dataset.  What is the value of the residual for this observation?  
+
+(1-2 sentences)
+The predicted value of v4mM is 8.7773 based on the equation i gave above, where Running.Time=15.8223-0.3729 x 18.9 which gives 8.7773 minutes.This is slightly different to the value of 8.82 given in the table above.8.82-8.7773=0.0427 minutes. This is because in regression models the analysis is done based on the average value of whole data and not only based on the individual data.This is also called as Residual error.
+
+
+
+#### Task 13: Predict the running time (i.e. `Running.Time`) when  `v4mM` is 2.6 km per hour. Explain if you have any concern related to this prediction.  
+
+(a) Write code in the chunk below to predict `Running.Time` when `v4mM`= 2.6 km/hr.  (Hint: copy and adapt the relevant code from the chunk above)
+```{r}
+lm1_new<-lm(Running.Time ~ v4mM, data = running)
+newdata_new<-data.frame(v4mM = 2.6)
+predict(lm1, newdata = newdata_new)
+```
+(b) Do you have any concern about this prediction, and if so why? (1 sentence)
+
+Yes, I have concern about this. The value that has been asked to change and predict now is 2.6,which falls outside the expected data range.Using this value in the model will not give us appropriate results.
+
+
+## Overall Conclusion and presentation 
+
+**10 marks**
+
+#### Task 14: State your overall conclusions in relation to the two main aims of the study (3-4 sentences for each)
+
+Aim (1) From the hypothesis test, confidence intervals for the true mean, and tolerance interval.
+Firstly, the mean of 3k that was defined initially as 10.2 is different. This is proved by the hypothesis test , with the p-value as 0.00119, which is less that the significant level of 0.05. The null hypothesis is rejected .The confidence interval 95 % is from 9.0615 to 9.8547 minutes and this indicates that the true population mean of 3k running time in mostly between these values and is not 10.2.The tolerance interval 90% shows that ninety percent of the population's running times will lie between range of the confidence intervals.
+
+Aim (2) From fitting a linear model for the relationship between 3k running time and the running speed at blood lactate concentration 4 mmol/litre.   
+The best fit equation, Running.Time = 15.8223-0.3729 x v4mM,shows the running time decreases by 0.36 minutes.The scatterplot shows a strong negative correlation between the Running time and the v4mM.As v4mM goes up, the Running time comes down.The intercept value of 15.822276 is statistically meaningful, it doesn't hold practical significance, as it corresponds to a scenario where v4mM is 0, which is not realistic for highly trained athletes.When the v4mM values within the ranges are used the model is accurate, if the values are outside of the range it is not that accurate.
+#### Task 15: Knit your .Rmd file to Word and submit the resulting Word document (alternatively knit to html, save the html as a pdf and submit the pdf).  Make sure you have edited the .Rmd to include your own name and student ID.  
+
+If you submit an .Rmd file only and no knitted file you will **lose 20 marks**, and if you submit a correctly knitted file missing your name and/or ID you will **lose 10 marks**.
+
